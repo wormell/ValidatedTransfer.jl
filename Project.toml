@@ -1,0 +1,16 @@
+name = "ValidatedTransfer"
+uuid = "de1c922a-0df0-57b7-a2ae-4ff57f6e1c88"
+version = "0.1.0"
+
+[deps]
+Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+IntervalArithmetic = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
+FastTransforms = "057dd010-8810-581a-b7be-e3fc3b93f78c"
+JLD = "4138dd39-2aa7-5051-a626-17a0bb65d9c8"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
+AbelFunctions = "2ffed88c-6fd5-5810-8176-fe43c1db8acb"
+
+[compat]
+julia = "1"
