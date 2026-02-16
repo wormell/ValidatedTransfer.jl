@@ -1,5 +1,6 @@
- addprocs(3)
-@everywhere using Base.Test, Compat, IntervalArithmetic, ValidatedTransfer
+using Distributed
+addprocs(3)
+@everywhere using Test, Compat, IntervalArithmetic, ValidatedTransfer
 
 # module Gauss
 #   using IntervalArithmetic, ValidatedTransfer, Compat
@@ -19,11 +20,11 @@
 #
 #
 #   # const biglog2 = (@biginterval(log(2)))::BigInterval
-#   Compat.@compat immutable g end; Compat.@compat (::g){T}(x::T) = (1/(exp2(x)-1))::T
-#   Compat.@compat immutable dg end; Compat.@compat (::dg){T}(x::T) = begin e2x = exp2(x); e2x1 = e2x-1; (-log(T(2))*e2x/(e2x1*e2x1))::T end
-#   Compat.@compat immutable γa end; Compat.@compat (::γa){T}(x::T) = (log2(1+1/x))::T
-#   Compat.@compat immutable h end; Compat.@compat (::h){T}(x::T) = (exp2(x)-1)::T
-#   Compat.@compat immutable dh end; Compat.@compat (::dh){T}(x::T) = (log(T(2))*exp2(x))::T
+#   Compat.@compat immutable g end; Compat.@compat (::g)(x::T) where T = (1/(exp2(x)-1))::T
+#   Compat.@compat immutable dg end; Compat.@compat (::dg)(x::T) where T = begin e2x = exp2(x); e2x1 = e2x-1; (-log(T(2))*e2x/(e2x1*e2x1))::T end
+#   Compat.@compat immutable γa end; Compat.@compat (::γa)(x::T) where T = (log2(1+1/x))::T
+#   Compat.@compat immutable h end; Compat.@compat (::h)(x::T) where T = (exp2(x)-1)::T
+#   Compat.@compat immutable dh end; Compat.@compat (::dh)(x::T) where T = (log(T(2))*exp2(x))::T
 #   α = IntervalArithmetic.@biginterval 1;
 #   α1 = IntervalArithmetic.@biginterval -1;
 #   G0 = IntervalArithmetic.@biginterval 1/log(2);
@@ -35,7 +36,7 @@
 
 @everywhere @eval begin
   N = 100
-  N_interp = nextpow2(N)
+  N_interp = nextpow(2,N)
 
   prec = 8round(Int,(N+512)*0.2/8)
   @compat setprecision(BigFloat,prec)
@@ -45,7 +46,7 @@
 
   ## MAP CONSTANTS
   @compat lan_v(x,b) = (5 - sqrt.(25-8(x+b)))/2
-  @compat lan_dv(x,b) = 2./sqrt.(25-8(x+b))
+  @compat lan_dv(x,b) = 2 ./ sqrt.(25-8(x+b))
   λ = @biginterval 3/2
   λ̌ = sqrt(λ)
   C1 = @biginterval 4/9
@@ -60,7 +61,7 @@
 
   @compat @assert precision(BigFloat) == prec
 
-  function acos_lan_v_norm{T}(A::Vector{T},b)
+  function acos_lan_v_norm(A::Vector{T},b) where T
     B = similar(A)
     for i in eachindex(B)
       B[i] = acos(2lan_v((A[i]+1)/2,b)-1)
@@ -68,7 +69,7 @@
     B
   end
 
-  function lan_dv_norm{T}(A::Vector{T},b)
+  function lan_dv_norm(A::Vector{T},b) where T
     B = similar(A)
     for i in eachindex(B)
       B[i] = lan_dv((A[i]+1)/2,b)
@@ -87,4 +88,5 @@ end
 
 @time M = maketransfer(N,lanford_transferfn,helperdata,aliaserror,entrybound,workers(),N_interp)
 @time S = getsolution(M,workers())
+println("Max entry diameter of S is ",maximum(diam.(S)))
 @time savezip(tempname(),S)

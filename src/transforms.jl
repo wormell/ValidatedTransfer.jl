@@ -1,5 +1,5 @@
 # from FastTransforms
-function backend_fft_pow2!{T}(x::Vector{T})
+function backend_fft_pow2!(x::Vector{T}) where T
     n,big2,bigpi=length(x),2one(T),T(pi)
     nn,j=n÷2,1
     @inbounds for i=1:2:n-1
@@ -35,7 +35,7 @@ function backend_fft_pow2!{T}(x::Vector{T})
     return x
 end
 
-function fft_pow2{T}(x::Vector{T})
+function fft_pow2(x::Vector{T}) where T
     y = FastTransforms.interlace(real(x),imag(x))
     backend_fft_pow2!(y)
 @compat    return complex.(y[1:2:end],y[2:2:end])
@@ -45,7 +45,7 @@ end
 
 taylorinterpolationerror(r,Ninterp::Int,M,R) = M*(r/R)^Ninterp/(1-r/R)
 
-function taylortransform{T}(vals::Vector{Complex{T}},r::T,M::T,R::T)
+function taylortransform(vals::Vector{Complex{T}},r::T,M::T,R::T) where T
   Ninterp = length(vals)
   cfs = fft_pow2(vals)/Ninterp
   err= erroradjustment(Complex{T},taylorinterpolationerror(r,Ninterp,M,R))
@@ -61,16 +61,16 @@ end
 
 ## CHEBYSHEV
 
-function chebyshevtransform{T}(a::AbstractArray{Complex{T}})
+function chebyshevtransform(a::AbstractArray{Complex{T}}) where T
   N = length(a) #big(length(a))
     ispow2(N) || error("N not a power of 2")
-    c = fft_pow2([a; flipdim(a,1)])
+    c = fft_pow2([a; reverse(a,dims=1)])
     d = c[1:N]
  @compat    d .*= exp.((-im*convert(T,pi)).*(0:N-1)./(2*N))
      d[1] = d[1] / 2 #sqrt(big(2))
-     scale!(inv(convert(T,N)), d)
+     d ./= N
 end
-@compat chebyshevtransform{T<:Real}(a::AbstractArray{T}) = real(chebyshevtransform(complex(a)))
+@compat chebyshevtransform(a::AbstractArray{T}) where T<:Real = real(chebyshevtransform(complex(a)))
 
 
 function cos_vec!(A::Vector)
@@ -84,7 +84,7 @@ chebyshevpoints(N_interp,T) = cos_vec!(collect(1:2:2N_interp-1)*(T(pi)/2N_interp
 chebyshev_shifted_sq(x,k) = (-1)^k * cos(2k*asin(x))
 chebyshev_shifted(x,k) = chebyshev_shifted_sq(sqrt(x),k)
 
-function chebyshev_shifted_by_squaring{T}(x::T,k)
+function chebyshev_shifted_by_squaring(x::T,k) where T
   tot=k;
   s0sq = 4x*(1-x)
   cn = 2x-1; sn_div = one(T)
@@ -99,8 +99,8 @@ function chebyshev_shifted_by_squaring{T}(x::T,k)
   ctot
 end
 
-function chebyshev_shifted_multiel{T}(x::T,K)
-  Tk = Array{T}(K)
+function chebyshev_shifted_multiel(x::T,K) where T
+  Tk = Array{T}(undef,K)
   mul = 4x-2
   K > 0 && (Tk[1] = one(typeof(x)))
   K > 1 && (Tk[2] = 2x-1)
@@ -113,7 +113,7 @@ function chebyshev_shifted_multiel{T}(x::T,K)
 end
 
 function fejerweights(n,T::DataType=Float64)
-  v = Array{Complex{T}}(n)
+  v = Array{Complex{T}}(undef,n)
   v[1] = 2
   # twid = exp(-im*T(pi)/n) # conjugating here to get ifft
   # twidp = copy(twid)

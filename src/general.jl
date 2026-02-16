@@ -2,7 +2,7 @@ const BigInterval = IntervalArithmetic.Interval{BigFloat} #typealias BigInterval
 
 function upbound(x)
   xu = _upbound(x)
-  assert(xu≥0)
+  @assert xu≥0
   xu
 end
 _upbound(x::Real) = x
@@ -10,13 +10,13 @@ _upbound(x::Interval) = x.hi
 
 roundupbound(x) = ceil(Int,upbound(x))
 
-prec{T}(::Type{Interval{T}}) = eps(T)
+prec(::Type{Interval{T}}) where T = eps(T)
 prec(T) = eps(T)
 
 erroradjustment(T,err) = zero(T)
-erroradjustment{T}(::Type{Interval{T}},err) = Interval(-upbound(err),upbound(err))
-erroradjustment{IT<:Interval}(::Type{Complex{IT}},err) =
-  complex(erroradjustment(IT,err),erroradjustment(IT,err))
+erroradjustment(::Type{Interval{T}},err) where T = Interval(-upbound(err),upbound(err))
+erroradjustment(::Type{Complex{IT}},err) where IT<:Interval =
+complex(erroradjustment(IT,err),erroradjustment(IT,err))
 erroradjustment(err) = erroradjustment(typeof(err),err)
 
 intervalsign(S) =  (S > 0) ? 1 : (S < 0) ? -1 : error("$S contains zero")
@@ -26,7 +26,7 @@ intervalsign(S) =  (S > 0) ? 1 : (S < 0) ? -1 : error("$S contains zero")
 import Base.exp2, Base.sqrt
 
 # VERSION < v"0.5" && (Base.hypot(x::Interval,y::Interval) = sqrt(x*x+y*y))
-function Base.sqrt{T<:Interval}(z::Complex{T})
+function Base.sqrt(z::Complex{T}) where T<:Interval
         (x,y) = reim(z)
         nz = hypot(x,y)
         if 0 ∈ y && x.lo < 0
@@ -51,9 +51,9 @@ function Base.sqrt{T<:Interval}(z::Complex{T})
         complex(re,im)
 end
 #
-# Base.log{T<:Interval}(z::Complex{T}) = complex(log(abs(z)),atan2(imag(z),real(z)))
+# Base.log(z::Complex{T}) where T<: Interval = complex(log(abs(z)),atan2(imag(z),real(z)))
 #
-function Base.exp2{T<:Real}(z::Complex{T})
+function Base.exp2(z::Complex{T}) where T<:Real
     er = exp2(real(z))
     theta = imag(z) * log(convert(T, 2))
     Complex(er*cos(theta), er*sin(theta))
@@ -62,8 +62,8 @@ end
 
 # Akiyama–Tanigawa algorithm for second Bernoulli numbers B+n
 function bernoulli2k(p::Integer,T)
-  B2 = Array{T}(p+1)
-  A = Array{BigInt}(2p+1)
+  B2 = Array{T}(undef,p+1)
+  A = Array{BigInt}(undef,2p+1)
   fact = one(BigInt)
   for m = 0:2p
       A[m+1] = fact

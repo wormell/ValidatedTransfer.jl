@@ -1,7 +1,7 @@
 julia 0.4
 FastTransforms
 IntervalArithmetic
-JLD
+JLD2
 FileIO
 Compat 0.12
 AbelFunctions

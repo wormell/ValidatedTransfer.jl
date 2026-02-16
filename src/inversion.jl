@@ -1,5 +1,7 @@
+## This is all really slow and (?)unnecessary so is deprecated
+
 # ROW REDUCTION
-function rowreduce_M{T}(M::Array{T},C,inds,fetched,qready)
+function rowreduce_M(M::Array{T},C,inds,fetched,qready) where T
   N = size(M,1)
   for i = 1:N
     i_ind = findfirst(inds,i)
@@ -30,7 +32,7 @@ function rowreduce_M{T}(M::Array{T},C,inds,fetched,qready)
   M
 end
 
-function rowreduce_S{T}(S::Array{T},C,inds,fetched,qready)
+function rowreduce_S(S::Array{T},C,inds,fetched,qready) where T
   N = size(S,1)
   for i = 1:N
     v = fetch(C)::Vector{T}
@@ -48,7 +50,7 @@ function rowreduce_S{T}(S::Array{T},C,inds,fetched,qready)
 end
 
 # BACK SUBSTITUTION
-function backsub_S{T}(S::Array{T},C,inds,fetched,qready)
+function backsub_S(S::Array{T},C,inds,fetched,qready) where T
   # S = fetch(S_r)
   N = size(S,1)
 
@@ -66,10 +68,10 @@ function backsub_S{T}(S::Array{T},C,inds,fetched,qready)
   S
 end
 
-function generateremoterefs(workerprocs)
-  ar = Array(typeof(RemoteRef()),size(workerprocs))
+function generateremotechannels(workerprocs)
+  ar = Array{typeof(RemoteChannel())}(undef,size(workerprocs))
   for (i,w) in enumerate(workerprocs)
-    ar[i] = RemoteRef(w)
+    ar[i] = RemoteChannel(w)
   end
   ar
 end
@@ -77,18 +79,18 @@ end
 function parallel_invert(M,workerprocs=workers();verbose=true)
   @assert size(M,1)==size(M,2)
   N = size(M,1)
-  S = eye(eltype(M),N)
+  S = Matrix{eltype(M)}(I,N,N)
   nws = length(workerprocs)
   enum_workers = enumerate(workerprocs)
 
 
   verbose && println("Channels...")
 
-  @compat C = RemoteRef(myid())
-  @compat fetched_M = generateremoterefs(workerprocs)
-  @compat fetched_S = generateremoterefs(workerprocs)
-  @compat qready_M = generateremoterefs(workerprocs)
-  @compat qready_S = generateremoterefs(workerprocs)
+  @compat C = RemoteChannel(myid())
+  @compat fetched_M = generateremotechannels(workerprocs)
+  @compat fetched_S = generateremotechannels(workerprocs)
+  @compat qready_M = generateremotechannels(workerprocs)
+  @compat qready_S = generateremotechannels(workerprocs)
 
   # ROW REDUCTION
   verbose && println("Reducing rows...")

@@ -1,14 +1,15 @@
 module ValidatedTransfer
-using IntervalArithmetic, Compat, FastTransforms, JLD, FileIO
+using IntervalArithmetic, Compat, FastTransforms, JLD2, FileIO, Distributed, LinearAlgebra
+using AbelFunctions
 
 include("general.jl")
 include("transforms.jl")
 include("transferbounds.jl")
 
 function filltransfer(J,K,transferfn_N,helperdata,aliaserror,entrybound,N_interp=maximum(J),T=BigInterval)
-  S = Array{T}(length(J),length(K))
+  S = Array{T}(undef,length(J),length(K))
   for (k_ind,k) in enumerate(K)
-    B = Array{T}(N_interp)
+    B = Array{T}(undef,N_interp)
     for i in eachindex(B)
         B[i] = transferfn_N(i,k,helperdata)
     end
@@ -16,7 +17,8 @@ function filltransfer(J,K,transferfn_N,helperdata,aliaserror,entrybound,N_interp
     for j in J
       ae = aliaserror(j,k,N_interp)
       S[j,k_ind] += erroradjustment(Interval(ae))
-      S[j,k_ind] = S[j,k_ind] ∩ erroradjustment(entrybound(j,k))
+      # println((S[j,k_ind],erroradjustment(entrybound(j,k)),S[j,k_ind] ∩ erroradjustment(Interval(entrybound(j,k)))))
+      S[j,k_ind] = S[j,k_ind] ∩ erroradjustment(Interval(entrybound(j,k)))
     end
   end
 
@@ -27,7 +29,7 @@ function maketransfer(N,transferfn,helperdata,aliaserror,entrybound,workerprocs=
   nws = length(workerprocs)
   enum_workers = enumerate(workerprocs)
 
-  M = Array(T,N,N)
+  M = Array{T}(undef,N,N)
   @sync begin
     for (pn,pid) in enum_workers
       @async M[:,pn:nws:N] = remotecall_fetch(filltransfer,pid,1:N,pn:nws:N,transferfn,helperdata,aliaserror,entrybound,N_interp,T)
@@ -54,20 +56,26 @@ include("inversion.jl")
 
 function getsolution!(M,workerprocs=workers();verbose=true)
   makesolutioninv!(M)
-  parallel_invert(M,workerprocs;verbose=verbose)
+  inv!(M)
+  # parallel_invert(M,workerprocs;verbose=verbose)
 end
 
 function getsolution(M,workerprocs=workers();verbose=true)
   K=makesolutioninv!(deepcopy(M))
-  parallel_invert(K,workerprocs;verbose=verbose)
+  inv(K)
+  # parallel_invert(K,workerprocs;verbose=verbose)
 end
 
+include("eulermaclaurin.jl")
+include("intermittent.jl")
+include("intermittent_returntime.jl")
 include("files.jl")
 
 export BigInterval, erroradjustment
 export ChebyshevZeroOneBV, AnalyticEntryBounds, FirstOrderLYBounds
 export logSEnorm, logEnorm, Snorm, aliaserror, entrybound
 export transfer_basisfun, transfer_basisfun_multiel
+export EulerMaclaurinPlan, transfer_basisfun, transfer_basisfun_multiel
 export maketransfer, getsolution
 export savezip, loadzip
 
